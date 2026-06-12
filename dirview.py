@@ -177,23 +177,7 @@ class FileSystemSizeModel(QFileSystemModel):
         if idx.isValid():
             size_idx = idx.sibling(idx.row(), SIZE_COLUMN)
             self.dataChanged.emit(size_idx, size_idx, [Qt.DisplayRole])
-
-    def data(self, index, role=Qt.DisplayRole):
-        """Подменяет текст в колонке размера для папок"""
-        if (
-            role == Qt.DisplayRole
-            and index.isValid()
-            and index.column() == SIZE_COLUMN
-            and self.isDir(index)
-        ):
-            path = self.filePath(index.sibling(index.row(), 0))
-            if path in self.progress_info:
-                return f"Подсчет... ({self.progress_info[path]} файлов)"
-            if path in self.folder_sizes:
-                return human_readable_size(self.folder_sizes[path])
-            return "Двойной клик"
-
-        return super().data(index, role)
+            
     
     def data(self, index, role=Qt.DisplayRole):
         """Текст размера папки в число"""
