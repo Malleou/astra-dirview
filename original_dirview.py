@@ -88,7 +88,7 @@ tree.setSortingEnabled(True)
 
 availableSize = QApplication.desktop().availableGeometry(tree).size()
 tree.resize(availableSize / 2)
-tree.setColumnWidth(0, tree.width() // 3)
+tree.setColumnWidth(0, tree.width() / 3)
 
 tree.setWindowTitle("Dir View")
 tree.show()

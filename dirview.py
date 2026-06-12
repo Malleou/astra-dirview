@@ -44,53 +44,125 @@
 
 
 import sys
+from pathlib import Path
 
-from PyQt5.QtCore import (QCommandLineOption, QCommandLineParser,
-        QCoreApplication, QDir, QT_VERSION_STR)
-from PyQt5.QtWidgets import (QApplication, QFileIconProvider, QFileSystemModel,
-        QTreeView)
+from PyQt5.QtCore import QDir, Qt, QSortFilterProxyModel, QTimer
+from PyQt5.QtWidgets import (
+    QApplication,
+    QFileSystemModel,
+    QLineEdit,
+    QMainWindow,
+    QTreeView,
+    QVBoxLayout,
+    QWidget,
+)
+
+FILTER_DELAY_MS = 250
 
 
-app = QApplication(sys.argv)
+class FileFilterProxyModel(QSortFilterProxyModel):
+    """Фильтрация по имени с сохранением родительских папок для совпадений."""
 
-QCoreApplication.setApplicationVersion(QT_VERSION_STR)
-parser = QCommandLineParser()
-parser.setApplicationDescription("Qt Dir View Example")
-parser.addHelpOption()
-parser.addVersionOption()
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._filter_text = ""
 
-dontUseCustomDirectoryIconsOption = QCommandLineOption('c',
-        "Set QFileIconProvider.DontUseCustomDirectoryIcons")
-parser.addOption(dontUseCustomDirectoryIconsOption)
-parser.addPositionalArgument('directory', "The directory to start in.")
-parser.process(app)
-try:
-    rootPath = parser.positionalArguments().pop(0)
-except IndexError:
-    rootPath = None
+    def setFilterText(self, text):
+        new_text = text.strip().lower()
+        if new_text == self._filter_text:
+            return
+        self._filter_text = new_text
+        self.invalidateFilter()
 
-model = QFileSystemModel()
-model.setRootPath('')
-if parser.isSet(dontUseCustomDirectoryIconsOption):
-    model.iconProvider().setOptions(
-            QFileIconProvider.DontUseCustomDirectoryIcons)
-tree = QTreeView()
-tree.setModel(model)
-if rootPath is not None:
-    rootIndex = model.index(QDir.cleanPath(rootPath))
-    if rootIndex.isValid():
-        tree.setRootIndex(rootIndex)
+    def filterAcceptsRow(self, source_row, source_parent):
+        if not self._filter_text:
+            return True
 
-# Demonstrating look and feel features.
-tree.setAnimated(False)
-tree.setIndentation(20)
-tree.setSortingEnabled(True)
+        model = self.sourceModel()
+        if model is None:
+            return False
 
-availableSize = QApplication.desktop().availableGeometry(tree).size()
-tree.resize(availableSize / 2)
-tree.setColumnWidth(0, tree.width() // 3)
+        index = model.index(source_row, 0, source_parent)
+        if not index.isValid():
+            return False
 
-tree.setWindowTitle("Dir View")
-tree.show()
+        if self._filter_text in model.fileName(index).lower():
+            return True
 
-sys.exit(app.exec_())
+        # Папка остается видимой, если внутри есть совпадение.
+        if model.isDir(index):
+            for row in range(model.rowCount(index)):
+                if self.filterAcceptsRow(row, index):
+                    return True
+
+        return False
+
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        self.home_path = str(Path.home())
+        self.setWindowTitle(f"Dir View - {self.home_path}")
+
+        # Модель файловой системы: файлы, папки и скрытые элементы.
+        self.model = QFileSystemModel(self)
+        self.model.setRootPath(self.home_path)
+        self.model.setFilter(QDir.AllEntries | QDir.Hidden | QDir.NoDotAndDotDot)
+
+        # Прокси-модель для фильтрации по имени.
+        self.proxy = FileFilterProxyModel(self)
+        self.proxy.setSourceModel(self.model)
+        self.proxy.setDynamicSortFilter(True)
+
+        # Дерево.
+        self.tree = QTreeView()
+        self.tree.setModel(self.proxy)
+        self.tree.setAnimated(True)
+        self.tree.setIndentation(20)
+        self.tree.setSortingEnabled(True)
+        self.tree.setColumnWidth(0, 300)
+        self.tree.sortByColumn(0, Qt.AscendingOrder)
+
+        # Стартовая директория — домашняя директория пользователя.
+        root_source_index = self.model.index(self.home_path)
+        self.tree.setRootIndex(self.proxy.mapFromSource(root_source_index))
+
+        # Поле фильтрации.
+        self.filter_edit = QLineEdit()
+        self.filter_edit.setPlaceholderText("Фильтр по имени файла или папки...")
+        self.filter_edit.setClearButtonEnabled(True)
+
+        # Небольшая задержка, чтобы не фильтровать на каждую букву.
+        self.filter_timer = QTimer(self)
+        self.filter_timer.setSingleShot(True)
+        self.filter_timer.setInterval(FILTER_DELAY_MS)
+
+        self.filter_edit.textChanged.connect(self.on_filter_text_changed)
+        self.filter_timer.timeout.connect(self.apply_filter)
+
+        # Компоновка.
+        central_widget = QWidget()
+        layout = QVBoxLayout(central_widget)
+        layout.addWidget(self.filter_edit)
+        layout.addWidget(self.tree)
+        self.setCentralWidget(central_widget)
+
+        self.resize(900, 600)
+
+    def on_filter_text_changed(self, _text):
+        self.filter_timer.start()
+
+    def apply_filter(self):
+        self.proxy.setFilterText(self.filter_edit.text())
+
+
+def main():
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.show()
+    sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    main()
