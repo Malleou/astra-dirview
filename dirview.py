@@ -67,6 +67,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from PyQt5.QtGui import QCloseEvent
 
 FILTER_DELAY_MS = 250
 SIZE_COLUMN = 1  # Колонка "Размер" в QFileSystemModel.
@@ -359,6 +360,17 @@ class MainWindow(QMainWindow):
         """Убирает завершившийся поток и воркер из хранилищ"""
         self._threads.pop(path, None)
         self._workers.pop(path, None)
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        """Останавливает фоновые потоки при закрытии окна"""
+        for worker in self._workers.values():
+            worker.stop()
+
+        for thread in list(self._threads.values()):
+            thread.quit()
+            thread.wait()
+
+        super().closeEvent(event)
 
 
 def main():
