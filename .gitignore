@@ -1,0 +1,21 @@
+# Артефакты сборки deb-пакета
+debian/.debhelper/
+debian/astra-dirview/
+debian/debhelper-build-stamp
+debian/files
+debian/*.debhelper
+debian/*.substvars
+debian/*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pybuild/
+build/
+dist/
+
+# Готовый .deb (лежит уровнем выше, но на всякий случай)
+*.deb
+*.buildinfo
+*.changes
