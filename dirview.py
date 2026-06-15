@@ -42,11 +42,11 @@
 ##
 #############################################################################
 
-import os
 import sys
 from pathlib import Path
+from core import human_readable_size, iter_folder_size
 
-from typing import Iterator, Tuple
+# from typing import Iterator, Tuple
 
 from PyQt5.QtCore import (
     QDir,
@@ -73,49 +73,49 @@ FILTER_DELAY_MS = 250
 SIZE_COLUMN = 1  # Колонка "Размер" в QFileSystemModel.
 
 
-def human_readable_size(num_bytes: int) -> str:
-    """Переводит байты в читаемый вид"""
+# def human_readable_size(num_bytes: int) -> str:
+#     """Переводит байты в читаемый вид"""
 
-    units = ["Б", "КБ", "МБ", "ГБ", "ТБ"]
-    size = float(num_bytes)
-    for unit in units:
-        if size < 1024.0 or unit == units[-1]:
-            if unit == "Б":
-                return f"{int(size)} {unit}"
-            return f"{size:.1f} {unit}"
-        size /= 1024.0
+#     units = ["Б", "КБ", "МБ", "ГБ", "ТБ"]
+#     size = float(num_bytes)
+#     for unit in units:
+#         if size < 1024.0 or unit == units[-1]:
+#             if unit == "Б":
+#                 return f"{int(size)} {unit}"
+#             return f"{size:.1f} {unit}"
+#         size /= 1024.0
 
 
-def iter_folder_size(path: str) -> Iterator[Tuple[str, int, int]]:
-    """
-    Считает суммарный размер папки через os.scandir
-    Периодически отдает промежуточный результат
-    """
+# def iter_folder_size(path: str) -> Iterator[Tuple[str, int, int]]:
+#     """
+#     Считает суммарный размер папки через os.scandir
+#     Периодически отдает промежуточный результат
+#     """
 
-    total = 0
-    count = 0
-    stack = [path]
-    display_files_count = 53
-    while stack:
-        current = stack.pop()
-        try:
-            with os.scandir(current) as it:
-                for entry in it:
-                    try:
-                        if entry.is_symlink():
-                            continue
-                        if entry.is_dir(follow_symlinks=False):
-                            stack.append(entry.path)
-                        elif entry.is_file(follow_symlinks=False):
-                            total += entry.stat(follow_symlinks=False).st_size
-                            count += 1
-                            if count % display_files_count == 0:
-                                yield ("progress", count, total)
-                    except OSError:
-                        pass
-        except OSError:
-            pass
-    yield ("done", count, total)
+#     total = 0
+#     count = 0
+#     stack = [path]
+#     display_files_count = 53
+#     while stack:
+#         current = stack.pop()
+#         try:
+#             with os.scandir(current) as it:
+#                 for entry in it:
+#                     try:
+#                         if entry.is_symlink():
+#                             continue
+#                         if entry.is_dir(follow_symlinks=False):
+#                             stack.append(entry.path)
+#                         elif entry.is_file(follow_symlinks=False):
+#                             total += entry.stat(follow_symlinks=False).st_size
+#                             count += 1
+#                             if count % display_files_count == 0:
+#                                 yield ("progress", count, total)
+#                     except OSError:
+#                         pass
+#         except OSError:
+#             pass
+#     yield ("done", count, total)
 
 
 class FolderSizeWorker(QObject):
@@ -182,8 +182,7 @@ class FileSystemSizeModel(QFileSystemModel):
         if idx.isValid():
             size_idx = idx.sibling(idx.row(), SIZE_COLUMN)
             self.dataChanged.emit(size_idx, size_idx, [Qt.DisplayRole])
-            
-    
+
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> object:
         """Текст размера папки в число"""
         if index.isValid() and index.column() == SIZE_COLUMN and self.isDir(index):
@@ -234,7 +233,7 @@ class FileFilterProxyModel(QSortFilterProxyModel):
                 if self.filterAcceptsRow(row, index):
                     return True
         return False
-    
+
     def lessThan(self, left: QModelIndex, right: QModelIndex) -> bool:
         """Особая сортировка для колонки размера"""
         model = self.sourceModel()
@@ -309,14 +308,12 @@ class MainWindow(QMainWindow):
         self._threads = {}
         self._workers = {}
 
-
     def on_filter_text_changed(self, _text: str) -> None:
         """Перезапуск таймера"""
         self.filter_timer.start()
 
     def apply_filter(self) -> None:
         self.proxy.setFilterText(self.filter_edit.text())
-
 
     def on_tree_double_clicked(self, proxy_index: QModelIndex) -> None:
         """Подсчёт размера папок по двойному клику"""
@@ -352,7 +349,7 @@ class MainWindow(QMainWindow):
         self._workers[path] = worker
         thread.start()
 
-    def on_size_ready(self, path:str, size: int) -> None:
+    def on_size_ready(self, path: str, size: int) -> None:
         """Сохраняет посчитанный размер"""
         self.model.set_folder_size(path, size)
 

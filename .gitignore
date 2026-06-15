@@ -14,8 +14,13 @@ __pycache__/
 .pybuild/
 build/
 dist/
+.venv/
+.pytest_cache/
 
 # Готовый .deb (лежит уровнем выше, но на всякий случай)
 *.deb
 *.buildinfo
 *.changes
+
+# quilt (служебные файлы патчей)
+.pc/
