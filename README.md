@@ -181,6 +181,9 @@ quilt pop -a    # откатить к оригиналу
    пароль, потом поставила мой пароль в значение логина и снова попросила
    пароль :)
 
+   ![Запрос логина](./images/login.png)
+   ![Запрос пароля](./images/pass.png)
+
 ## Код
 За основу приложения взял пример `itemviews/dirview.py` из публичного
 репозитория https://github.com/baoboa/pyqt5/tree/master/examples/itemviews
